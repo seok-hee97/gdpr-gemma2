@@ -7,7 +7,6 @@ By fine-tuning Google's Gemma 2B model using Direct Preference Optimization (DPO
 we've created a powerful tool to assist organizations with data protection queries and regulatory compliance.     
 
 
-
 ## Key Features
 
 - Specialized in GDPR compliance and data protection regulations
@@ -37,7 +36,7 @@ we've created a powerful tool to assist organizations with data protection queri
   - 
 - Related LLM project
   - [(hugging face)sims2k/Saul-Instruct-v1-gdpr-finetuned-v5.2](https://huggingface.co/sims2k/Saul-Instruct-v1-gdpr-finetuned-v5.2)
-(summary :해당 질문이 GDPR 잘 준수했는지 확인해주는 LLM 모델)
+
 - Concept
   - [Data Loss Prevention, an EU/GDPR perspective](https://grcoutlook.com/data-loss-prevention-an-eu-gdpr-perspective/)
   - [How to Cato Uses Large Language Models to Improve Data Loss Prvention](https://www.catonetworks.com/blog/how-cato-uses-large-language-models-to-improve-data-loss-prevention/)
