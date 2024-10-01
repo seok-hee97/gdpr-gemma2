@@ -23,7 +23,7 @@ we've created a powerful tool to assist organizations with data protection queri
 - Quantization: 4-bit quantization using QLoRA
 
 
-
+----------------------------------------------------------------------------------------------------------------------------
 
 ## Reference
 
