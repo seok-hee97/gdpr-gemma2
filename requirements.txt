@@ -7,7 +7,8 @@ bitsandbytes>=0.42.0
 sentencepiece==0.1.99
 accelerate==0.30.1
 huggingface_hub==0.23.2
-python-dotenv
-streamlit
-openai
-rich
+python-dotenv==1.2.2
+streamlit==1.56.0
+openai==2.30.0
+rich==14.3.3
+evaluate==0.4.6
