@@ -1,0 +1,12 @@
+torch>=2.3.1
+transformers==4.43.0
+datasets==2.19.1
+trl==0.8.6
+peft==0.11.1
+bitsandbytes==0.43.1
+sentencepiece==0.1.99
+accelerate==0.30.1
+huggingface_hub==0.23.2
+python-dotenv
+streamlit
+openai

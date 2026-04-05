@@ -24,6 +24,61 @@ we've created a powerful tool to assist organizations with data protection queri
 
 ----------------------------------------------------------------------------------------------------------------------------
 
+## Project Structure
+
+```text
+/gdpr-gemma2
+├── src/                    # Source Modules
+│   ├── config.py           # Hyperparameters & Local Paths
+│   ├── data_loader.py      # Multi-stage data processing
+│   ├── sft_train.py        # [Stage 1] Knowledge injection
+│   ├── generate_rejections.py # [Stage 2] Dynamic data prep
+│   ├── dpo_train.py        # [Stage 3] Preference alignment
+│   ├── inference.py        # Hybrid inference engine
+│   └── eval.py             # ROUGE/BLEU Evaluation
+├── data/                   # Dataset storage (.cache included)
+├── models/                 # Model artifacts (SFT/DPO)
+├── app.py                  # Streamlit Web Interface
+├── Dockerfile              # Containerized Deployment
+└── requirements.txt        # Python dependencies
+```
+
+## Getting Started (for DGX Spark / Server)
+
+### 1. Environment Setup
+```bash
+conda create -n gdpr-env python=3.10 -y
+conda activate gdpr-env
+pip install -r requirements.txt
+```
+
+### 2. 2-Stage Training Pipeline
+To achieve industry-standard performance, follow these steps:
+
+1. **Stage 1 (SFT):** Teach the model GDPR facts.
+   ```bash
+   python -m src.sft_train
+   ```
+2. **Stage 2 (Data Prep):** Generate real-world rejections from the SFT model.
+   ```bash
+   python -m src.generate_rejections
+   ```
+3. **Stage 3 (DPO):** Align the model to prefer expert answers over SFT errors.
+   ```bash
+   python -m src.dpo_train
+   ```
+
+### 3. Evaluation & Inference
+- **Benchmark:** `python -m src.eval`
+- **Web Assistant:** `streamlit run app.py`
+
+## Evaluation Results
+Current evaluation performed on M1 Mac (20 samples):
+- **ROUGE-L:** 0.2094
+- **BLEU:** 0.1129
+
+---
+
 ## Reference
 
 #### project-reference

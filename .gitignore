@@ -1,3 +1,9 @@
 HF_model_card.md/
 final_checkpoint/
 linkedin-post.md
+.env
+AGENTS.md
+gdpr_gemma_2b/
+__pycache__/
+models/
+
