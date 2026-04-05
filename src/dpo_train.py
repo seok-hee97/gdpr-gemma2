@@ -15,12 +15,12 @@ def train_dpo():
     set_seed(42)
 
     # 1. Load Tokenizer (SFT 단계에서 사용된 것과 동일하게)
-    tokenizer = AutoTokenizer.from_pretrained(config.BASE_MODEL_NAME, cache_dir=config.CACHE_DIR)
+    tokenizer = AutoTokenizer.from_pretrained(config.BASE_MODEL_NAME)
     tokenizer.pad_token = tokenizer.eos_token
 
     # 2. Load Dynamic Dataset
     print(f"Loading dynamic dataset from {config.DYNAMIC_DATASET_PATH}")
-    dataset = load_dataset("json", data_files=config.DYNAMIC_DATASET_PATH, split="train", cache_dir=config.CACHE_DIR)
+    dataset = load_dataset("json", data_files=config.DYNAMIC_DATASET_PATH, split="train")
 
     def format_dpo(example):
         # ChatML 포맷 유지
@@ -45,8 +45,7 @@ def train_dpo():
         config.BASE_MODEL_NAME,
         quantization_config=bnb_config,
         torch_dtype=torch.bfloat16,
-        device_map="auto",
-        cache_dir=config.CACHE_DIR
+        device_map="auto"
     )
 
     # [중요] Stage 1에서 학습한 SFT 어댑터를 먼저 로드

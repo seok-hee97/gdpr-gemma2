@@ -15,8 +15,12 @@ JUDGE_MODEL = "gpt-4o"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(PROJECT_ROOT, "data")
 MODELS_DIR = os.path.join(PROJECT_ROOT, "models")
-CACHE_DIR = os.path.join(PROJECT_ROOT, ".cache")
 EVAL_RESULTS_DIR = os.path.join(PROJECT_ROOT, "evaluate")
+
+# Redirect Hugging Face to download base models into the 'models/' directory
+# This avoids permission issues and keeps all model artifacts in one place.
+os.environ["HF_HOME"] = os.path.join(MODELS_DIR, "huggingface")
+os.environ["TRANSFORMERS_CACHE"] = os.environ["HF_HOME"]
 
 # Stage-specific output paths
 SFT_MODEL_PATH = os.path.join(MODELS_DIR, "gemma-2b-gdpr-sft")
@@ -45,5 +49,4 @@ MAX_LENGTH = 2048
 # Ensure directories exist
 os.makedirs(DATA_DIR, exist_ok=True)
 os.makedirs(MODELS_DIR, exist_ok=True)
-os.makedirs(CACHE_DIR, exist_ok=True)
 os.makedirs(EVAL_RESULTS_DIR, exist_ok=True)

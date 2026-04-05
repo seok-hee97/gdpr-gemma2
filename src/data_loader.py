@@ -6,8 +6,7 @@ def get_gdpr_dataset(tokenizer: AutoTokenizer, stage="sft", split='train[:]'):
     """Load and format the GDPR dataset based on training stage."""
     dataset = load_dataset(
         "sims2k/GDPR_QA_instruct_dataset", 
-        split=split,
-        cache_dir=config.CACHE_DIR
+        split=split
     )
     
     def format_sft(example):

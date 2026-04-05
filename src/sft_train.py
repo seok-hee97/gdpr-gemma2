@@ -15,7 +15,7 @@ def train_sft():
     set_seed(42)
 
     # 1. Load Tokenizer
-    tokenizer = AutoTokenizer.from_pretrained(config.BASE_MODEL_NAME, cache_dir=config.CACHE_DIR)
+    tokenizer = AutoTokenizer.from_pretrained(config.BASE_MODEL_NAME)
     tokenizer.pad_token = tokenizer.eos_token
 
     # 2. Load SFT Dataset
@@ -32,8 +32,7 @@ def train_sft():
         config.BASE_MODEL_NAME,
         quantization_config=bnb_config,
         torch_dtype=torch.bfloat16,
-        device_map="auto",
-        cache_dir=config.CACHE_DIR
+        device_map="auto"
     )
     model.config.use_cache = False
 

@@ -17,8 +17,7 @@ def train():
 
     # 1. Load Tokenizer
     tokenizer = AutoTokenizer.from_pretrained(
-        config.BASE_MODEL_NAME,
-        cache_dir=config.CACHE_DIR
+        config.BASE_MODEL_NAME
     )
     tokenizer.pad_token = tokenizer.eos_token 
 
@@ -38,8 +37,7 @@ def train():
         quantization_config=bnb_config,
         attn_implementation='eager',
         torch_dtype=torch.bfloat16,
-        device_map="auto",
-        cache_dir=config.CACHE_DIR # 로컬 폴더에 저장
+        device_map="auto"
     )
     model.config.use_cache = False
     model.gradient_checkpointing_enable()

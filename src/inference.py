@@ -22,8 +22,7 @@ class GDPRInference:
         
         # Load tokenizer
         self.tokenizer = AutoTokenizer.from_pretrained(
-            config.BASE_MODEL_NAME, 
-            cache_dir=config.CACHE_DIR
+            config.BASE_MODEL_NAME
         )
         self.tokenizer.pad_token = self.tokenizer.eos_token
         
@@ -32,8 +31,7 @@ class GDPRInference:
             config.BASE_MODEL_NAME,
             torch_dtype=torch.bfloat16,
             device_map="auto",
-            low_cpu_mem_usage=True,
-            cache_dir=config.CACHE_DIR
+            low_cpu_mem_usage=True
         )
 
         # Check if it's an adapter path (SFT/DPO outputs are adapters by default in our scripts)
