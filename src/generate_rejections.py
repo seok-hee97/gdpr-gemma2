@@ -16,10 +16,12 @@ def generate_rejections():
     )
     model = PeftModel.from_pretrained(base_model, config.SFT_MODEL_PATH)
     tokenizer = AutoTokenizer.from_pretrained(config.SFT_MODEL_PATH)
+    
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
-    tokenizer.padding_side = "left" # Batch inference를 위해 왼쪽 패딩 권장
+    tokenizer.padding_side = "left" # 필수: Batch inference를 위해 왼쪽 패딩
     
+    # 2. Pipeline setup
     pipe = pipeline(
         "text-generation", 
         model=model, 
@@ -27,37 +29,27 @@ def generate_rejections():
         device_map="auto"
     )
 
-    # 2. Load Original Dataset
+    # 3. Load Original Dataset
     dataset = load_dataset("sims2k/GDPR_QA_instruct_dataset", split='train[:]')
     
-    # 3. Prepare Prompts
-    print("Preparing prompts...")
-    prompts = []
-    for example in dataset:
-        instruction = example['instruction']
-        input_text = example['input']
-        prompt_content = f"{instruction}\n\n{input_text}"
-        messages = [{"role": "user", "content": prompt_content}]
-        formatted_prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-        prompts.append(formatted_prompt)
+    # Generator for memory efficiency
+    def data_generator():
+        for example in dataset:
+            instruction = example['instruction']
+            input_text = example['input']
+            prompt_content = f"{instruction}\n\n{input_text}"
+            messages = [{"role": "user", "content": prompt_content}]
+            yield tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
 
-    # 4. Generate Responses (Batch Inference)
+    # 4. Generate Responses (Batch Inference with Progress Bar)
     print("Generating rejections from SFT model (Batch mode)...")
-    batch_size = 4  # VRAM 용량에 따라 4~8 정도로 조절 가능
-    results = []
+    batch_size = 4  # VRAM 용량에 따라 4~16 정도로 조절 가능
     
-    # pipe에 리스트를 직접 전달하고 batch_size를 설정하면 내부적으로 최적화됩니다.
-    outputs = pipe(
-        prompts, 
-        max_new_tokens=256, 
-        do_sample=True, 
-        temperature=0.7, 
-        batch_size=batch_size,
-        return_full_text=False # 결과에서 프롬프트 제외하고 답변만 받기
-    )
-
     dynamic_data = []
-    for i, output in enumerate(outputs):
+    
+    # pipe에 generator를 넘기면 배치를 유지하며 결과를 하나씩 내뱉습니다.
+    # return_full_text=False를 사용해 프롬프트를 제외한 답변만 추출합니다.
+    for i, output in enumerate(tqdm(pipe(data_generator(), batch_size=batch_size, max_new_tokens=256, do_sample=True, temperature=0.7, return_full_text=False), total=len(dataset))):
         rejected_response = output[0]['generated_text'].strip()
         
         dynamic_data.append({

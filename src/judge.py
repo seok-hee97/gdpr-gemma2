@@ -33,39 +33,44 @@ def evaluate_with_llm(csv_name="evaluation_results_comprehensive.csv"):
 
     for _, row in tqdm(test_samples.iterrows(), total=len(test_samples)):
         prompt = f"""
-        당신은 GDPR(유럽 일반 데이터 보호 규칙) 법률 전문가이자 AI 모델 평가관입니다.
-        아래의 질문에 대해 AI 모델이 내놓은 답변을 전문가의 정답(Reference)과 비교하여 평가해 주세요.
+        Evaluate the AI model's response for compliance with the General Data Protection Regulation (GDPR) based on the provided Reference.
 
-        [질문]
+        [Instruction]
+        Compare the [Prediction] with the [Reference] based on the [Question].
+        Assess the accuracy, alignment with GDPR principles, and the overall quality of the prediction.
+
+        [Question]
         {row['prompt']}
 
-        [전문가 정답 (Reference)]
+        [Reference (Expert Answer)]
         {row['reference']}
 
-        [AI 모델 답변 (Prediction)]
+        [Prediction (AI Model)]
         {row['prediction']}
 
-        다음 3가지 항목에 대해 1점(매우 나쁨)에서 5점(매우 좋음) 사이의 점수를 부여하고, 그 이유를 짧게 설명해 주세요.
-        1. 법적 정확성 (Legal Correctness): 모델 답변이 GDPR 조문 및 법적 사실과 일치하는가?
-        2. 준수성 (Compliance Alignment): GDPR의 핵심 원칙을 잘 반영하고 있는가?
-        3. 가독성 및 완성도 (Clarity): 답변이 명확하고 전문가다운 어조를 유지하는가?
+        Please provide your evaluation on a scale of 1 to 5 for the following criteria:
+        1. Legal Correctness: Does the prediction align with specific GDPR articles and legal facts?
+        2. Compliance Alignment: Does it correctly reflect core GDPR principles (e.g., Lawfulness, Transparency, Data Minimization)?
+        3. Clarity & Professionalism: Is the response clear, structured, and maintaining a professional tone?
 
-        반드시 아래 JSON 형식으로만 응답해 주세요:
+        You MUST respond ONLY in the following JSON format:
         {{
             "scores": {{
-                "correctness": 0,
-                "compliance": 0,
-                "clarity": 0
+                "correctness": <int: 1-5>,
+                "compliance": <int: 1-5>,
+                "clarity": <int: 1-5>
             }},
-            "reasoning": "점수 부여 이유 요약"
+            "reasoning": "Detailed explanation of your scores in English."
         }}
         """
 
         try:
             response = client.chat.completions.create(
                 model=config.JUDGE_MODEL,
-                messages=[{"role": "system", "content": "You are a GDPR legal expert."},
-                          {"role": "user", "content": prompt}],
+                messages=[
+                    {"role": "system", "content": "You are a senior legal expert specializing in GDPR and an experienced AI evaluation specialist. Your goal is to provide rigorous, accurate, and objective scores for AI-generated legal advice."},
+                    {"role": "user", "content": prompt}
+                ],
                 response_format={ "type": "json_object" }
             )
             result = json.loads(response.choices[0].message.content)

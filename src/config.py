@@ -15,7 +15,7 @@ JUDGE_MODEL = "gpt-4o"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(PROJECT_ROOT, "data")
 MODELS_DIR = os.path.join(PROJECT_ROOT, "models")
-EVAL_RESULTS_DIR = os.path.join(PROJECT_ROOT, "evaluate")
+EVAL_RESULTS_DIR = os.path.join(PROJECT_ROOT, "eval")
 
 # Redirect Hugging Face to download base models into the 'models/' directory
 # This avoids permission issues and keeps all model artifacts in one place.
