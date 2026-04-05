@@ -96,3 +96,30 @@ data/ , models/ 폴더 생성
 models/ 경로에 베이스 모델 저장하고 학습된 모델 만들어서 저장하고
 
 data/ 경로에 사용하는 데이터 저장하고 생성된 데이터도 저장하는 걸로 하면 되지
+
+
+
+  1 # 1. Base 모델 평가
+   2 python -m src.eval --model_path "google/gemma-2-2b-it" --output_csv "eval_base.csv"
+   3
+   4 # 2. SFT 모델 평가
+   5 python -m src.eval --model_path "./models/gemma-2-2b-it-gdpr-sft" --output_csv "eval_sft.csv"
+   6
+   7 # 3. DPO 모델 평가 (최종 모델)
+   8 python -m src.eval --model_path "./models/gemma-2b-gdpr-dpo" --output_csv "eval_dpo.csv"
+  (참고: 모델 경로는 실제 생성된 폴더명에 맞춰 수정해 주세요.)
+
+  ---
+
+  2. 정성적 성능 평가 (LLM-as-a-Judge)
+
+  생성된 CSV 파일들을 GPT-4o를 통해 법적 정확성을 평가합니다.
+
+   1 # 1. Base 모델 판정
+   2 python -m src.judge --input_csv "eval_base.csv" --output_csv "judge_base.csv"
+   3
+   4 # 2. SFT 모델 판정
+   5 python -m src.judge --input_csv "eval_sft.csv" --output_csv "judge_sft.csv"
+   6
+   7 # 3. DPO 모델 판정
+   8 python -m src.judge --input_csv "eval_dpo.csv" --output_csv "judge_dpo.csv"
