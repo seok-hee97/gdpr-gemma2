@@ -1,22 +1,25 @@
 import torch
+import argparse
+import os
+import pandas as pd
 from datasets import load_dataset
 from evaluate import load
 from tqdm import tqdm
-import pandas as pd
 from .inference import GDPRInference
 from . import config
 
-def run_evaluation(model_path=None, split="train[:100]"): # 샘플 수를 100개로 확대
+def run_evaluation(args):
     """
     정량적 성능 평가 수행 (ROUGE, BLEU)
     """
-    print(f"--- Starting Evaluation for {model_path or config.NEW_MODEL_NAME} ---")
+    model_path = args.model_path or config.NEW_MODEL_NAME
+    print(f"--- Starting Evaluation for {model_path} ---")
     
     # 1. 데이터셋 로드
     try:
         # 학습에 쓰이지 않은 전문 평가 데이터셋 사용 권장
-        dataset_name = "sims2k/GDPR_QA_instruct_dataset"
-        test_ds = load_dataset(dataset_name, split=split)
+        dataset_name = args.dataset_name
+        test_ds = load_dataset(dataset_name, split=args.split)
     except Exception as e:
         print(f"Dataset load failed: {e}")
         return
@@ -33,21 +36,22 @@ def run_evaluation(model_path=None, split="train[:100]"): # 샘플 수를 100개
     results_log = []
 
     # 4. 추론 루프
+    print(f"Generating responses for {len(test_ds)} samples...")
     for i, example in enumerate(tqdm(test_ds)):
         prompt = f"{example['instruction']}\n\n{example['input']}"
         reference = example['output']
         
         # 모델 답변 생성 (충분한 길이 확보)
-        prediction = infer.generate(prompt, max_new_tokens=512)
+        prediction = infer.generate(prompt, max_new_tokens=args.max_new_tokens)
         
         predictions.append(prediction)
         references.append(reference)
         
         results_log.append({
             "id": i,
-            "prompt": prompt[:100],
-            "reference": reference[:100],
-            "prediction": prediction[:100]
+            "prompt": prompt,
+            "reference": reference,
+            "prediction": prediction
         })
 
     # 5. 점수 계산
@@ -61,11 +65,19 @@ def run_evaluation(model_path=None, split="train[:100]"): # 샘플 수를 100개
     
     # 상세 로그 저장
     df = pd.DataFrame(results_log)
-    output_path = os.path.join(config.EVAL_RESULTS_DIR, "evaluation_results_comprehensive.csv")
+    output_path = os.path.join(config.EVAL_RESULTS_DIR, args.output_csv)
     df.to_csv(output_path, index=False)
     print(f"Detailed logs saved to {output_path}")
     
     return rouge_results, bleu_results
 
 if __name__ == "__main__":
-    run_evaluation()
+    parser = argparse.ArgumentParser(description="Evaluate GDPR Model Performance")
+    parser.add_argument("--model_path", type=str, default=None, help="Path to the model to evaluate")
+    parser.add_argument("--dataset_name", type=str, default="sims2k/GDPR_QA_instruct_dataset")
+    parser.add_argument("--split", type=str, default="train[:100]")
+    parser.add_argument("--output_csv", type=str, default="evaluation_results_comprehensive.csv")
+    parser.add_argument("--max_new_tokens", type=int, default=512)
+    
+    args = parser.parse_args()
+    run_evaluation(args)

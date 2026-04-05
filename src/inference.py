@@ -5,20 +5,20 @@ from . import config
 import os
 
 class GDPRInference:
-    def __init__(self, model_stage="dpo"):
+    def __init__(self, model_path="dpo"):
         """
-        model_stage: "base", "sft", "dpo" 중 선택하거나 특정 경로 입력
+        model_path: "base", "sft", "dpo" 중 선택하거나 특정 경로 입력
         """
-        if model_stage == "base":
+        if model_path == "base":
             self.model_name = config.BASE_MODEL_NAME
-        elif model_stage == "sft":
+        elif model_path == "sft":
             self.model_name = config.SFT_MODEL_PATH
-        elif model_stage == "dpo":
+        elif model_path == "dpo":
             self.model_name = config.DPO_MODEL_PATH
         else:
-            self.model_name = model_stage
+            self.model_name = model_path
 
-        print(f"Initializing Inference Engine for stage: {model_stage}")
+        print(f"Initializing Inference Engine for path: {self.model_name}")
         
         # Load tokenizer
         self.tokenizer = AutoTokenizer.from_pretrained(

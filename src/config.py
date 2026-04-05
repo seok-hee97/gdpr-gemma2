@@ -25,6 +25,7 @@ os.environ["TRANSFORMERS_CACHE"] = os.environ["HF_HOME"]
 # Stage-specific output paths
 SFT_MODEL_PATH = os.path.join(MODELS_DIR, "gemma-2b-gdpr-sft")
 DPO_MODEL_PATH = os.path.join(MODELS_DIR, "gemma-2b-gdpr-dpo")
+NEW_MODEL_NAME = DPO_MODEL_PATH # Default model for evaluation
 DYNAMIC_DATASET_PATH = os.path.join(DATA_DIR, "gdpr_dynamic_dpo.jsonl")
 
 # --- QLoRA Configuration ---

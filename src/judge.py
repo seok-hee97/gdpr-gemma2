@@ -1,11 +1,12 @@
 import os
 import json
+import argparse
 import pandas as pd
 from openai import OpenAI
 from tqdm import tqdm
 from . import config
 
-def evaluate_with_llm(csv_name="evaluation_results_comprehensive.csv"):
+def evaluate_with_llm(args):
     """
     GPT-4를 판사로 사용하여 모델 답변의 법적 정확성과 품질을 평가합니다.
     """
@@ -16,7 +17,7 @@ def evaluate_with_llm(csv_name="evaluation_results_comprehensive.csv"):
     client = OpenAI(api_key=config.OPENAI_API_KEY)
     
     # 평가 결과 입력 경로
-    input_path = os.path.join(config.EVAL_RESULTS_DIR, csv_name)
+    input_path = os.path.join(config.EVAL_RESULTS_DIR, args.input_csv)
     
     try:
         df = pd.read_csv(input_path)
@@ -26,10 +27,10 @@ def evaluate_with_llm(csv_name="evaluation_results_comprehensive.csv"):
 
     judge_results = []
 
-    print(f"Starting LLM-as-a-judge using {config.JUDGE_MODEL}...")
+    print(f"Starting LLM-as-a-judge using {args.judge_model}...")
     
-    # 샘플 10개만 우선 테스트 (비용 고려)
-    test_samples = df.head(10)
+    # 샘플 개수 제한
+    test_samples = df.head(args.num_samples)
 
     for _, row in tqdm(test_samples.iterrows(), total=len(test_samples)):
         prompt = f"""
@@ -66,7 +67,7 @@ def evaluate_with_llm(csv_name="evaluation_results_comprehensive.csv"):
 
         try:
             response = client.chat.completions.create(
-                model=config.JUDGE_MODEL,
+                model=args.judge_model,
                 messages=[
                     {"role": "system", "content": "You are a senior legal expert specializing in GDPR and an experienced AI evaluation specialist. Your goal is to provide rigorous, accurate, and objective scores for AI-generated legal advice."},
                     {"role": "user", "content": prompt}
@@ -83,7 +84,7 @@ def evaluate_with_llm(csv_name="evaluation_results_comprehensive.csv"):
             print(f"API Error at sample {row.get('id')}: {e}")
 
     # 결과 저장 경로
-    output_path = os.path.join(config.EVAL_RESULTS_DIR, "llm_judge_results.csv")
+    output_path = os.path.join(config.EVAL_RESULTS_DIR, args.output_csv)
     result_df = pd.DataFrame(judge_results)
     result_df.to_csv(output_path, index=False)
     
@@ -100,4 +101,11 @@ def evaluate_with_llm(csv_name="evaluation_results_comprehensive.csv"):
         print(f"Detailed logs saved to {output_path}")
 
 if __name__ == "__main__":
-    evaluate_with_llm()
+    parser = argparse.ArgumentParser(description="LLM-as-a-Judge for GDPR Model Evaluation")
+    parser.add_argument("--input_csv", type=str, default="evaluation_results_comprehensive.csv")
+    parser.add_argument("--output_csv", type=str, default="llm_judge_results.csv")
+    parser.add_argument("--num_samples", type=int, default=10)
+    parser.add_argument("--judge_model", type=str, default=config.JUDGE_MODEL)
+    
+    args = parser.parse_args()
+    evaluate_with_llm(args)
