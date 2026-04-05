@@ -1,26 +1,35 @@
 # GDPR-Gemma-2-2B
 ## GDPR Compliance Assistant: AI-Powered Data Protection Guidance
 
+🚀 **Project Highlights:**
+- Specialized AI model for GDPR compliance guidance
+- Fine-tuned Google's Gemma 2B using a 3-Stage Training Pipeline (SFT -> Dynamic Rejection -> DPO)
+- Implemented QLoRA for efficient, resource-friendly training
+- Designed to provide accurate, relevant responses to GDPR-related inquiries
+- Qualitative evaluation using LLM-as-a-judge (GPT-4o)
+
 ## Project Description
 This project develops an advanced AI model specialized in providing guidance on GDPR (General Data Protection Regulation) compliance.     
 By fine-tuning Google's Gemma 2B model using Direct Preference Optimization (DPO) and a GDPR-specific dataset,     
-we've created a powerful tool to assist organizations with data protection queries and regulatory compliance.     
+we've created a powerful tool to assist organizations with data protection queries and regulatory compliance.
 
+🔗 **Hugging Face Model:** [cycloevan/gdpr_gemma-2-2b](https://huggingface.co/cycloevan/gdpr_gemma-2-2b)
+📚 **GitHub Repository:** [seok-hee97/gdpr-gemma2](https://github.com/seok-hee97/gdpr-gemma2)
 
 ## Key Features
 
-- Specialized in GDPR compliance and data protection regulations
-- Utilizes DPO for precise alignment with GDPR principles
-- Implements QLoRA for efficient and resource-friendly training
-- Designed to provide accurate and relevant responses to GDPR-related inquiries
+- **GDPR Expertise:** Specialized in GDPR compliance and data protection regulations.
+- **DPO Alignment:** Utilizes Direct Preference Optimization (DPO) with Dynamic Rejection for precise alignment with GDPR principles.
+- **Resource Efficient:** Implements 4-bit quantization using QLoRA for efficient training on standard hardware.
+- **Comprehensive Evaluation:** Combines ROUGE/BLEU scores with qualitative assessment via GPT-4o.
 
-## Model Details
+## Technical Specifications
 
-- Base Model: Google Gemma 2B
-- Fine-tuning Method: Direct Preference Optimization (DPO)
-- Training Dataset: [sims2k/GDPR_QA_instruct_dataset](https://huggingface.co/datasets/sims2k/GDPR_QA_instruct_dataset)
-- Quantization: 4-bit quantization using QLoRA
-
+- **Base Model:** `google/gemma-2-2b-it`
+- **Fine-tuning Method:** 3-Stage Pipeline (SFT -> Dynamic Rejection -> DPO)
+- **Training Dataset:** [sims2k/GDPR_QA_instruct_dataset](https://huggingface.co/datasets/sims2k/GDPR_QA_instruct_dataset)
+- **Quantization:** 4-bit (QLoRA)
+- **Judge Model:** `gpt-4o` (OpenAI API) for qualitative evaluation.
 
 ----------------------------------------------------------------------------------------------------------------------------
 
@@ -32,12 +41,14 @@ we've created a powerful tool to assist organizations with data protection queri
 │   ├── config.py           # Hyperparameters & Local Paths
 │   ├── data_loader.py      # Multi-stage data processing
 │   ├── sft_train.py        # [Stage 1] Knowledge injection
-│   ├── generate_rejections.py # [Stage 2] Dynamic data prep
+│   ├── generate_rejections.py # [Stage 2] Dynamic data prep (Dynamic Rejection)
 │   ├── dpo_train.py        # [Stage 3] Preference alignment
 │   ├── inference.py        # Hybrid inference engine
-│   └── eval.py             # ROUGE/BLEU Evaluation
+│   ├── eval.py             # ROUGE/BLEU Evaluation
+│   └── judge.py            # LLM-as-a-judge (GPT-4o) Assessment
 ├── data/                   # Dataset storage (.cache included)
 ├── models/                 # Model artifacts (SFT/DPO)
+├── evaluate/               # Evaluation results and reports
 ├── app.py                  # Streamlit Web Interface
 ├── Dockerfile              # Containerized Deployment
 └── requirements.txt        # Python dependencies
@@ -52,14 +63,14 @@ conda activate gdpr-env
 pip install -r requirements.txt
 ```
 
-### 2. 2-Stage Training Pipeline
+### 2. 3-Stage Training Pipeline
 To achieve industry-standard performance, follow these steps:
 
 1. **Stage 1 (SFT):** Teach the model GDPR facts.
    ```bash
    python -m src.sft_train
    ```
-2. **Stage 2 (Data Prep):** Generate real-world rejections from the SFT model.
+2. **Stage 2 (Data Prep):** Generate real-world rejections from the SFT model (Dynamic Rejection).
    ```bash
    python -m src.generate_rejections
    ```
@@ -70,7 +81,22 @@ To achieve industry-standard performance, follow these steps:
 
 ### 3. Evaluation & Inference
 - **Benchmark:** `python -m src.eval`
+- **Qualitative Judge:** `python -m src.judge`
 - **Web Assistant:** `streamlit run app.py`
+
+## Roadmap & Status
+
+### **1. 완료된 작업 (Completed Tasks)**
+- [x] **Modularization:** 핵심 로직 모듈화 및 경로 최적화.
+- [x] **Stage 1 & 3 Train Scripts:** SFT 및 DPO 전용 학습 스크립트 구축.
+- [x] **Stage 2 Data Prep:** SFT 모델 기반 동적 오답 생성(`src/generate_rejections.py`) 구축.
+- [x] **Hybrid Inference:** Base/SFT/DPO 모델 선택적 로드 엔진 고도화.
+- [x] **Evaluation Suite:** 정량 평가 및 LLM 판사 시스템 구축 및 저장 경로(`evaluate/`) 통합.
+
+### **2. Future Work**
+- [ ] Support for multi-lingual GDPR guidance.
+- [ ] Integration with more legal-specific datasets.
+- [ ] Optimization for mobile inference.
 
 ## Evaluation Results
 Current evaluation performed on M1 Mac (20 samples):
