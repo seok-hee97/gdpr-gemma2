@@ -47,8 +47,8 @@ we've created a powerful tool to assist organizations with data protection queri
 │   ├── eval.py             # ROUGE/BLEU Evaluation
 │   └── judge.py            # LLM-as-a-judge (GPT-4o) Assessment
 ├── data/                   # Dataset storage (.cache included)
-├── models/                 # Model artifacts (SFT/DPO)
-├── evaluate/               # Evaluation results and reports
+├── models/                 # Model artifacts (Base/SFT/DPO)
+├── eval/                   # Evaluation results and LLM-judge reports
 ├── app.py                  # Streamlit Web Interface
 ├── Dockerfile              # Containerized Deployment
 └── requirements.txt        # Python dependencies
@@ -58,7 +58,7 @@ we've created a powerful tool to assist organizations with data protection queri
 
 ### 1. Environment Setup
 ```bash
-conda create -n gdpr-env python=3.10 -y
+conda create -n gdpr-env python=3.11 -y
 conda activate gdpr-env
 pip install -r requirements.txt
 ```
@@ -91,7 +91,8 @@ To achieve industry-standard performance, follow these steps:
 - [x] **Stage 1 & 3 Train Scripts:** SFT 및 DPO 전용 학습 스크립트 구축.
 - [x] **Stage 2 Data Prep:** SFT 모델 기반 동적 오답 생성(`src/generate_rejections.py`) 구축.
 - [x] **Hybrid Inference:** Base/SFT/DPO 모델 선택적 로드 엔진 고도화.
-- [x] **Evaluation Suite:** 정량 평가 및 LLM 판사 시스템 구축 및 저장 경로(`evaluate/`) 통합.
+- [x] **Evaluation Suite:** 정량 평가 및 LLM 판사 시스템 구축 및 저장 경로(`eval/`) 통합.
+- [x] **Final Benchmarking:** DGX Spark에서 3-Stage 파이프라인 전체 재실행 및 평가 완료.
 
 ### **2. Future Work**
 - [ ] Support for multi-lingual GDPR guidance.
@@ -99,60 +100,67 @@ To achieve industry-standard performance, follow these steps:
 - [ ] Optimization for mobile inference.
 
 ## Evaluation Results
-Current evaluation performed on M1 Mac (20 samples):
-- **ROUGE-L:** 0.2094
-- **BLEU:** 0.1129
+
+Final benchmark on DGX Spark — quantitative on 100 samples, LLM-as-a-Judge (GPT-4o) on 10 samples.
+
+### Quantitative (ROUGE / BLEU / BertScore)
+| Metric        | Base   | SFT    | DPO    |
+|---------------|--------|--------|--------|
+| ROUGE-L       | 0.2072 | **0.2331** | 0.2252 |
+| BLEU          | 0.0838 | **0.1146** | 0.1034 |
+| BertScore F1  | 0.8432 | **0.8541** | 0.8527 |
+
+### Qualitative (LLM-as-a-Judge, 1–5)
+| Criterion             | Base | SFT  | DPO      |
+|-----------------------|------|------|----------|
+| Legal Correctness     | 3.10 | 3.00 | **3.40** |
+| Article Accuracy      | 2.20 | 2.30 | **2.60** |
+| Compliance Alignment  | 3.70 | 3.40 | **3.80** |
+| Clarity               | **4.10** | **4.10** | 3.80 |
+
+DPO improves legal accuracy and GDPR alignment over Base, while SFT contributes the strongest gains in surface-level fluency metrics.
 
 ---
 
-## Reference
+## References
 
-#### project-reference
-- QLoRa Fine-tuning
-  - [Fine-tuning Gemma with QLoRa](https://medium.com/google-developer-experts/fine-tuning-gemma-with-qlora-407e56c36026)
-  - [Fine-Tune Gemma Using QLoRA](https://medium.com/@samvardhan777/fine-tune-gemma-using-qlora-%EF%B8%8F-6b2f2e76dc55)
-- Code Reference
-  - [(github)UKPLab/sentance-transformers](https://github.com/UKPLab/sentence-transformers)
-  - [(cookbook)Aligning_DPO_Gemma_2b_it.ipynb](https://github.com/google-gemini/gemma-cookbook/blob/main/Gemma/Aligning_DPO_Gemma_2b_it.ipynb)
-  - 
-- Related LLM project
-  - [(hugging face)sims2k/Saul-Instruct-v1-gdpr-finetuned-v5.2](https://huggingface.co/sims2k/Saul-Instruct-v1-gdpr-finetuned-v5.2)
-
-- Concept
-  - [Data Loss Prevention, an EU/GDPR perspective](https://grcoutlook.com/data-loss-prevention-an-eu-gdpr-perspective/)
-  - [How to Cato Uses Large Language Models to Improve Data Loss Prvention](https://www.catonetworks.com/blog/how-cato-uses-large-language-models-to-improve-data-loss-prevention/)
-
-
-#### Dataset
-- [sims2k/GDPR_QA_instruct_dataset](https://huggingface.co/datasets/sims2k/GDPR_QA_instruct_dataset)
-- [sims2k/GDPR_QA_instruct_eval_dataset](https://huggingface.co/datasets/sims2k/GDPR_QA_instruct_eval_dataset)
-- [(github)gdpr-dataset](https://github.com/tamjidrahat/gdpr-dataset)
-- [Is Your Policy Compliant?: A Deep Learning-based Empirical Study of Privacy Policies' Compliance with GDPR](https://dl.acm.org/doi/10.1145/3559613.3563195)
-
-
-#### Gemma-docs
-- [Gemma](https://ai.google.dev/gemma/) 
-- [Announcement](https://blog.google/technology/developers/google-gemma-2/)
-- [Docs](https://ai.google.dev/gemma/docs)
-- [Blog posts](https://developers.googleblog.com/en/search/?query=gemma&product_categories=Gemma) 
-- [Cookbook](https://github.com/google-gemini/gemma-cookbook)
-
-
-#### Gemma Model
-- [(구글코라이 블로그)구글의 최첨단 오픈 모델 '젬마(Gemma)'를 공개합니다](https://blog.google/intl/ko-kr/products/explore-get-answers/-gemma-open-models-kr/)
+### Model & Official Docs
+- [Gemma — Official site](https://ai.google.dev/gemma/)
 - [Gemma 2 model card](https://ai.google.dev/gemma/docs/model_card_2#model_information)
-- [Encoder Only 와 Decoder Only 언어모델에 대한 고찰](https://medium.com/@hugmanskj/encoder-only-%EC%99%80-decoder-only-%EC%96%B8%EC%96%B4%EB%AA%A8%EB%8D%B8%EC%97%90-%EB%8C%80%ED%95%9C-%EA%B3%A0%EC%B0%B0-9852213dbb72)
+- [Gemma 2 announcement](https://blog.google/technology/developers/google-gemma-2/)
+- [Gemma docs](https://ai.google.dev/gemma/docs)
+- [Gemma Cookbook (GitHub)](https://github.com/google-gemini/gemma-cookbook)
+- [Aligning DPO Gemma 2B-it (Cookbook notebook)](https://github.com/google-gemini/gemma-cookbook/blob/main/Gemma/Aligning_DPO_Gemma_2b_it.ipynb)
 
+### Datasets
+- [sims2k/GDPR_QA_instruct_dataset (HF)](https://huggingface.co/datasets/sims2k/GDPR_QA_instruct_dataset) — primary training set
+- [sims2k/GDPR_QA_instruct_eval_dataset (HF)](https://huggingface.co/datasets/sims2k/GDPR_QA_instruct_eval_dataset) — evaluation split
+- [tamjidrahat/gdpr-dataset (GitHub)](https://github.com/tamjidrahat/gdpr-dataset)
+- [Is Your Policy Compliant? — ACM paper (2022)](https://dl.acm.org/doi/10.1145/3559613.3563195)
 
-#### reference
-- [(youtube)Fine-tuning LLMs | w/ Example Code](https://www.youtube.com/watch?v=eC6Hd1hFvos)
+### Fine-tuning Techniques (QLoRA · LoRA · DPO)
+- [Fine-tuning Gemma with QLoRA — Google Developer Experts](https://medium.com/google-developer-experts/fine-tuning-gemma-with-qlora-407e56c36026)
+- [Fine-Tune Gemma Using QLoRA — Samvardhan](https://medium.com/@samvardhan777/fine-tune-gemma-using-qlora-%EF%B8%8F-6b2f2e76dc55)
 - [Low-Rank Adapter (LoRA) Explained](https://medium.com/@shelikohan/low-rank-adapter-lora-explained-0d3677395639)
-- [(medium)Getting Started with Google's Gemma LLM using HuggingFace Libaries](https://medium.com/@coldstart_coder/getting-started-with-googles-gemma-llm-using-huggingface-libraries-a0d826c552ae)
-- [(DEVOCEAN) Gemma 한국어 요약 모델 파인튜닝 빠르게 해보기](https://devocean.sk.com/blog/techBoardDetail.do?ID=165703&boardType=techBlog&ref=blog.update.sh)
-- [(DEVOCEAN)오픈소스 LLM에 새로운 표준을 제시할 구글 Gemma](https://devocean.sk.com/blog/techBoardDetail.do?ID=165709)
-- [(blog)Gemma: Open Models Based on GeminiResearch and Technology 논문 리뷰](https://wiz-tech.tistory.com/entry/Gemma-Open-Models-Based-on-GeminiResearch-and-Technology-%EB%85%BC%EB%AC%B8-%EB%A6%AC%EB%B7%B0)
-- [Sherlock Holmes Q&A with Gemma fine tuning](https://www.kaggle.com/code/lucamassaron/sherlock-holmes-q-a-with-gemma-fine-tuning/notebook)
+- [Fine-tuning LLMs w/ Example Code (YouTube)](https://www.youtube.com/watch?v=eC6Hd1hFvos)
+- [Getting Started with Gemma using HuggingFace Libraries](https://medium.com/@coldstart_coder/getting-started-with-googles-gemma-llm-using-huggingface-libraries-a0d826c552ae)
+- [Sherlock Holmes Q&A with Gemma fine-tuning (Kaggle)](https://www.kaggle.com/code/lucamassaron/sherlock-holmes-q-a-with-gemma-fine-tuning/notebook)
 
-#### Community
+### Related Projects
+- [sims2k/Saul-Instruct-v1-gdpr-finetuned-v5.2 (HF)](https://huggingface.co/sims2k/Saul-Instruct-v1-gdpr-finetuned-v5.2)
+- [UKPLab/sentence-transformers (GitHub)](https://github.com/UKPLab/sentence-transformers)
+
+### Domain Background (GDPR & DLP)
+- [Data Loss Prevention — an EU/GDPR perspective](https://grcoutlook.com/data-loss-prevention-an-eu-gdpr-perspective/)
+- [How Cato uses LLMs to improve Data Loss Prevention](https://www.catonetworks.com/blog/how-cato-uses-large-language-models-to-improve-data-loss-prevention/)
+
+### Korean-language Resources
+- [구글의 최첨단 오픈 모델 '젬마(Gemma)' 공개 — Google Korea Blog](https://blog.google/intl/ko-kr/products/explore-get-answers/-gemma-open-models-kr/)
+- [Encoder Only 와 Decoder Only 언어모델에 대한 고찰](https://medium.com/@hugmanskj/encoder-only-%EC%99%80-decoder-only-%EC%96%B8%EC%96%B4%EB%AA%A8%EB%8D%B8%EC%97%90-%EB%8C%80%ED%95%9C-%EA%B3%A0%EC%B0%B0-9852213dbb72)
+- [Gemma 한국어 요약 모델 파인튜닝 — DEVOCEAN](https://devocean.sk.com/blog/techBoardDetail.do?ID=165703&boardType=techBlog&ref=blog.update.sh)
+- [오픈소스 LLM에 새로운 표준 — DEVOCEAN](https://devocean.sk.com/blog/techBoardDetail.do?ID=165709)
+- [Gemma 논문 리뷰 — wiz-tech](https://wiz-tech.tistory.com/entry/Gemma-Open-Models-Based-on-GeminiResearch-and-Technology-%EB%85%BC%EB%AC%B8-%EB%A6%AC%EB%B7%B0)
+
+### Community
 - [Build with Google AI forum](https://discuss.ai.google.dev/)
-- [Discord 채널](https://discord.com/channels/1009525727504384150/1209857547390025768)
+- [Gemma developer blog posts](https://developers.googleblog.com/en/search/?query=gemma&product_categories=Gemma)

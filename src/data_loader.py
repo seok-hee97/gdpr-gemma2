@@ -5,8 +5,9 @@ from . import config
 def get_gdpr_dataset(tokenizer: AutoTokenizer, stage="sft", split='train[:]'):
     """Load and format the GDPR dataset based on training stage."""
     dataset = load_dataset(
-        "sims2k/GDPR_QA_instruct_dataset", 
-        split=split
+        "sims2k/GDPR_QA_instruct_dataset",
+        split=split,
+        cache_dir=config.DATASET_CACHE_DIR
     )
     
     def format_sft(example):
@@ -15,18 +16,23 @@ def get_gdpr_dataset(tokenizer: AutoTokenizer, stage="sft", split='train[:]'):
         input_text = example['input']
         response = example['output']
         
-        full_text = f"<bos><start_of_turn>user\n{instruction}\n\n{input_text}<end_of_turn>\n<start_of_turn>model\n{response}<eos>"
-        return {"text": full_text}
+        messages = [
+            {"role": "user", "content": f"{instruction}\n\n{input_text}"},
+            {"role": "model", "content": response}
+        ]
+        return {"text": tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=False)}
 
     def format_dpo(example):
         """Format for Direct Preference Optimization (Prompt + Chosen + Rejected)."""
         instruction = example['instruction']
         input_text = example['input']
-        prompt = f"<bos><start_of_turn>user\n{instruction}\n\n{input_text}<end_of_turn>\n<start_of_turn>model\n"
         
-        chosen = example['output'] + "<eos>"
+        messages = [{"role": "user", "content": f"{instruction}\n\n{input_text}"}]
+        prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+        
+        chosen = example['output'] + tokenizer.eos_token
         # Note: In Stage 3, this will be replaced by actual SFT model rejections.
-        rejected = example.get('rejected', "I'm not familiar with the specific GDPR regulations for this case.") + "<eos>"
+        rejected = example.get('rejected', "I'm not familiar with the specific GDPR regulations for this case.") + tokenizer.eos_token
         
         return {
             "prompt": prompt,

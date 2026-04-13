@@ -1,4 +1,3 @@
-import torch
 import argparse
 from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 from peft import PeftModel
@@ -8,12 +7,15 @@ from tqdm import tqdm
 from . import config
 
 def generate_rejections(args):
+    config.ensure_base_model()
+
     # 1. Load SFT Model (Base + Adapter)
     print(f"Loading SFT model from {args.sft_model_path} for rejection generation...")
     base_model = AutoModelForCausalLM.from_pretrained(
         args.base_model,
-        torch_dtype=torch.bfloat16,
-        device_map="auto"
+        torch_dtype=config.TORCH_DTYPE,
+        device_map="auto",
+        attn_implementation="eager"  # Gemma2 권장
     )
     model = PeftModel.from_pretrained(base_model, args.sft_model_path)
     tokenizer = AutoTokenizer.from_pretrained(args.sft_model_path)
@@ -31,7 +33,7 @@ def generate_rejections(args):
     )
 
     # 3. Load Original Dataset
-    dataset = load_dataset(args.dataset_name, split=args.split)
+    dataset = load_dataset(args.dataset_name, split=args.split, cache_dir=config.DATASET_CACHE_DIR)
     
     # Generator for memory efficiency
     def data_generator():
@@ -49,7 +51,7 @@ def generate_rejections(args):
     
     # pipe에 generator를 넘기면 배치를 유지하며 결과를 하나씩 내뱉습니다.
     # return_full_text=False를 사용해 프롬프트를 제외한 답변만 추출합니다.
-    for i, output in enumerate(tqdm(pipe(data_generator(), batch_size=args.batch_size, max_new_tokens=args.max_new_tokens, do_sample=True, temperature=0.7, return_full_text=False), total=len(dataset))):
+    for i, output in enumerate(tqdm(pipe(data_generator(), batch_size=args.batch_size, max_new_tokens=args.max_new_tokens, do_sample=True, temperature=0.9, return_full_text=False), total=len(dataset))):
         rejected_response = output[0]['generated_text'].strip()
         
         dynamic_data.append({
@@ -68,7 +70,7 @@ def generate_rejections(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Stage 2: Generate Dynamic Rejections for DPO")
-    parser.add_argument("--base_model", type=str, default=config.BASE_MODEL_NAME)
+    parser.add_argument("--base_model", type=str, default=config.BASE_MODEL_PATH)
     parser.add_argument("--sft_model_path", type=str, default=config.SFT_MODEL_PATH)
     parser.add_argument("--dataset_name", type=str, default="sims2k/GDPR_QA_instruct_dataset")
     parser.add_argument("--split", type=str, default="train[:]")

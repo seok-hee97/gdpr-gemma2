@@ -32,7 +32,7 @@ def evaluate_with_llm(args):
     # 샘플 개수 제한
     test_samples = df.head(args.num_samples)
 
-    for _, row in tqdm(test_samples.iterrows(), total=len(test_samples)):
+    for i, row in tqdm(test_samples.iterrows(), total=len(test_samples)):
         prompt = f"""
         Evaluate the AI model's response for compliance with the General Data Protection Regulation (GDPR) based on the provided Reference.
 
@@ -51,17 +51,19 @@ def evaluate_with_llm(args):
 
         Please provide your evaluation on a scale of 1 to 5 for the following criteria:
         1. Legal Correctness: Does the prediction align with specific GDPR articles and legal facts?
-        2. Compliance Alignment: Does it correctly reflect core GDPR principles (e.g., Lawfulness, Transparency, Data Minimization)?
-        3. Clarity & Professionalism: Is the response clear, structured, and maintaining a professional tone?
+        2. Article Accuracy: Does it cite the correct GDPR articles if mentioned? (Rate 3 if no articles are mentioned but text is correct)
+        3. Compliance Alignment: Does it correctly reflect core GDPR principles (e.g., Lawfulness, Transparency, Data Minimization)?
+        4. Clarity & Professionalism: Is the response clear, structured, and maintaining a professional tone?
 
         You MUST respond ONLY in the following JSON format:
         {{
             "scores": {{
                 "correctness": <int: 1-5>,
+                "article_accuracy": <int: 1-5>,
                 "compliance": <int: 1-5>,
                 "clarity": <int: 1-5>
             }},
-            "reasoning": "Detailed explanation of your scores in English."
+            "reasoning": "Detailed explanation of your scores in English, specifically mentioning any legal errors."
         }}
         """
 
@@ -76,7 +78,7 @@ def evaluate_with_llm(args):
             )
             result = json.loads(response.choices[0].message.content)
             judge_results.append({
-                "id": row.get('id', 0),
+                "id": row.get('id', i),
                 "scores": result['scores'],
                 "reasoning": result['reasoning']
             })
@@ -86,18 +88,19 @@ def evaluate_with_llm(args):
     # 결과 저장 경로
     output_path = os.path.join(config.EVAL_RESULTS_DIR, args.output_csv)
     result_df = pd.DataFrame(judge_results)
-    result_df.to_csv(output_path, index=False)
+    
+    # Flatten scores into columns
+    scores_df = pd.json_normalize(result_df['scores'])
+    final_df = pd.concat([result_df.drop('scores', axis=1), scores_df], axis=1)
+    final_df.to_csv(output_path, index=False)
     
     # 평균 점수 계산 및 출력
     if judge_results:
-        avg_correctness = result_df['scores'].apply(lambda x: x['correctness']).mean()
-        avg_compliance = result_df['scores'].apply(lambda x: x['compliance']).mean()
-        avg_clarity = result_df['scores'].apply(lambda x: x['clarity']).mean()
-        
         print("\n--- LLM Judge Results (Averages) ---")
-        print(f"Legal Correctness: {avg_correctness:.2f}/5.0")
-        print(f"Compliance Alignment: {avg_compliance:.2f}/5.0")
-        print(f"Clarity: {avg_clarity:.2f}/5.0")
+        print(f"Legal Correctness: {final_df['correctness'].mean():.2f}/5.0")
+        print(f"Article Accuracy: {final_df['article_accuracy'].mean():.2f}/5.0")
+        print(f"Compliance Alignment: {final_df['compliance'].mean():.2f}/5.0")
+        print(f"Clarity: {final_df['clarity'].mean():.2f}/5.0")
         print(f"Detailed logs saved to {output_path}")
 
 if __name__ == "__main__":

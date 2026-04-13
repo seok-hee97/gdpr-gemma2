@@ -1,7 +1,22 @@
 import os
+import torch
 from dotenv import load_dotenv
 
 load_dotenv()
+
+# --- Hardware Auto-Detection ---
+if torch.cuda.is_available():
+    DEVICE = "cuda"
+    TORCH_DTYPE = torch.bfloat16
+    USE_QUANTIZATION = True
+elif torch.backends.mps.is_available():
+    DEVICE = "mps"
+    TORCH_DTYPE = torch.float16
+    USE_QUANTIZATION = False   # bitsandbytes는 CUDA 전용
+else:
+    DEVICE = "cpu"
+    TORCH_DTYPE = torch.float32
+    USE_QUANTIZATION = False
 
 # --- Model & Tokenizer ---
 BASE_MODEL_NAME = "google/gemma-2-2b-it"
@@ -10,6 +25,7 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # --- Evaluation (LLM-as-a-judge) ---
 JUDGE_MODEL = "gpt-4o" 
+BERT_SCORE_MODEL = "roberta-large" # Recommended for English
 
 # --- Paths (Local Storage) ---
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -17,10 +33,17 @@ DATA_DIR = os.path.join(PROJECT_ROOT, "data")
 MODELS_DIR = os.path.join(PROJECT_ROOT, "models")
 EVAL_RESULTS_DIR = os.path.join(PROJECT_ROOT, "eval")
 
-# Redirect Hugging Face to download base models into the 'models/' directory
-# This avoids permission issues and keeps all model artifacts in one place.
-os.environ["HF_HOME"] = os.path.join(MODELS_DIR, "huggingface")
-os.environ["TRANSFORMERS_CACHE"] = os.environ["HF_HOME"]
+# Local paths
+BASE_MODEL_PATH = os.path.join(MODELS_DIR, "gemma-2-2b-it")
+DATASET_CACHE_DIR = os.path.join(DATA_DIR, "huggingface")
+
+def ensure_base_model():
+    """로컬에 베이스 모델이 없으면 Hub에서 다운로드."""
+    if os.path.exists(os.path.join(BASE_MODEL_PATH, "config.json")):
+        return
+    from huggingface_hub import snapshot_download
+    print(f"Downloading {BASE_MODEL_NAME} -> {BASE_MODEL_PATH}")
+    snapshot_download(BASE_MODEL_NAME, local_dir=BASE_MODEL_PATH, token=HF_TOKEN)
 
 # Stage-specific output paths
 SFT_MODEL_PATH = os.path.join(MODELS_DIR, "gemma-2b-gdpr-sft")
