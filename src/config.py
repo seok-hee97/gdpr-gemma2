@@ -22,6 +22,9 @@ else:
 BASE_MODEL_NAME = "google/gemma-2-2b-it"
 HF_TOKEN = os.getenv("HF_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+UPSTAGE_API_KEY = os.getenv("UPSTAGE_API_KEY")
+UPSTAGE_BASE_URL = "https://api.upstage.ai/v1"
+UPSTAGE_MODEL = "solar-pro"  # solar-pro, solar-pro-3, solar-mini
 
 # --- Evaluation (LLM-as-a-judge) ---
 JUDGE_MODEL = "gpt-4o" 
@@ -64,9 +67,16 @@ BATCH_SIZE = 1
 GRADIENT_ACCUMULATION_STEPS = 4
 
 # --- DPO Configuration ---
-DPO_BETA = 0.1
+# β raised from 0.1 → 0.3 (2026-04-13) after data inspection revealed
+# noisy preference pairs: stronger KL constraint to SFT prevents the model
+# from over-fitting to length/citation-count surface signals.
+DPO_BETA = 0.3
 DPO_LEARNING_RATE = 5e-6
 DPO_EPOCHS = 3
+# IPO (Identity Preference Optimization, Azar et al. 2023) is more robust to
+# noisy / weakly-differentiated preference pairs than vanilla sigmoid DPO.
+# Falls back to "sigmoid" if you want to compare.
+DPO_LOSS_TYPE = "ipo"
 MAX_PROMPT_LENGTH = 1024
 MAX_LENGTH = 2048
 

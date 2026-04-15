@@ -20,7 +20,9 @@ def train_sft(args):
     tokenizer.pad_token = tokenizer.eos_token
 
     # 2. Load SFT Dataset with Validation Split (90/10)
-    full_dataset = get_gdpr_dataset(tokenizer, stage="sft")
+    full_dataset = get_gdpr_dataset(
+        tokenizer, stage="sft", local_path=args.local_path
+    )
     dataset_split = full_dataset.train_test_split(test_size=0.1)
     train_dataset = dataset_split["train"]
     eval_dataset = dataset_split["test"]
@@ -101,6 +103,11 @@ if __name__ == "__main__":
     parser.add_argument("--lora_r", type=int, default=config.LORA_R)
     parser.add_argument("--lora_alpha", type=int, default=config.LORA_ALPHA)
     parser.add_argument("--lora_dropout", type=float, default=config.LORA_DROPOUT)
-    
+    parser.add_argument(
+        "--local_path", type=str, default=None,
+        help="Path to local JSONL dataset (overrides HF dataset). "
+             "Must have instruction/input/output fields.",
+    )
+
     args = parser.parse_args()
     train_sft(args)

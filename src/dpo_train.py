@@ -88,6 +88,8 @@ def train_dpo(args):
     )
 
     # 5. DPO Trainer (SFT PEFT 모델이 이미 로드되어 있으므로 peft_config 불필요)
+    #    loss_type="ipo" — more robust to noisy preference pairs than the
+    #    default sigmoid loss (see config.DPO_LOSS_TYPE for rationale).
     trainer = DPOTrainer(
         model=model,
         args=training_args,
@@ -95,6 +97,7 @@ def train_dpo(args):
         eval_dataset=eval_dataset,
         tokenizer=tokenizer,
         beta=args.beta,
+        loss_type=args.loss_type,
         max_prompt_length=config.MAX_PROMPT_LENGTH,
         max_length=config.MAX_LENGTH,
     )
@@ -118,5 +121,12 @@ if __name__ == "__main__":
     parser.add_argument("--learning_rate", type=float, default=config.DPO_LEARNING_RATE)
     parser.add_argument("--epochs", type=int, default=config.DPO_EPOCHS)
     parser.add_argument("--beta", type=float, default=config.DPO_BETA)
+    parser.add_argument(
+        "--loss_type",
+        type=str,
+        default=config.DPO_LOSS_TYPE,
+        choices=["sigmoid", "ipo", "hinge", "kto_pair"],
+        help="DPO loss variant (default 'ipo' — robust to noisy pairs)",
+    )
     args = parser.parse_args()
     train_dpo(args)
