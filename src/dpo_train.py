@@ -76,11 +76,8 @@ def train_dpo(args):
         learning_rate=args.learning_rate,
         num_train_epochs=args.epochs,
         save_strategy="epoch",
-        save_total_limit=2,  # 디스크 절약: 최근 2개 checkpoint 만 유지
-        # Step-level evaluation to detect DPO overfitting (much faster than epoch
-        # eval on large datasets, still catches overfitting within an epoch)
-        evaluation_strategy="steps",
-        eval_steps=50,
+        save_total_limit=2,
+        evaluation_strategy="epoch",
         logging_steps=10,
         warmup_ratio=0.1,  # DPO 권장: 학습 초기 안정화
         bf16=(config.DEVICE == "cuda"),
