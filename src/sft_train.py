@@ -28,16 +28,20 @@ def train_sft(args):
     eval_dataset = dataset_split["test"]
 
     # 3. Model Configuration
+    # Force single-GPU placement — "auto" can offload to CPU/disk on
+    # unified-memory systems (e.g., DGX GH200), which breaks 4-bit loading.
     load_kwargs = {
         "torch_dtype": config.TORCH_DTYPE,
-        "device_map": "auto",
+        "device_map": {"": 0} if config.DEVICE == "cuda" else "auto",
     }
     if config.USE_QUANTIZATION:
         bnb_config = BitsAndBytesConfig(
             load_in_4bit=True,
             bnb_4bit_use_double_quant=True,
             bnb_4bit_quant_type="nf4",
-            bnb_4bit_compute_dtype=config.TORCH_DTYPE
+            bnb_4bit_compute_dtype=config.TORCH_DTYPE,
+            # Explicitly disable CPU offload — we want fully on GPU
+            llm_int8_enable_fp32_cpu_offload=False,
         )
         load_kwargs["quantization_config"] = bnb_config
 
@@ -64,12 +68,17 @@ def train_sft(args):
         learning_rate=args.learning_rate,
         num_train_epochs=args.epochs,
         save_strategy="epoch",
-        evaluation_strategy="epoch", # 매 에폭마다 평가
+        save_total_limit=2,  # 디스크 절약: 최근 2개 checkpoint 만 유지
+        evaluation_strategy="epoch",
         logging_steps=10,
+        warmup_ratio=0.03,  # LR warmup (SFT 안정화)
         bf16=(config.DEVICE == "cuda"),
         fp16=False,
         report_to="none",
-        load_best_model_at_end=True # 가장 성능 좋은 모델 저장
+        load_best_model_at_end=True,
+        metric_for_best_model="eval_loss",
+        greater_is_better=False,
+        max_grad_norm=1.0,
     )
 
     # 6. SFT Trainer

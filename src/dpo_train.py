@@ -40,16 +40,18 @@ def train_dpo(args):
     eval_dataset = dataset_split["test"]
 
     # 3. Model Configuration
+    # Force single-GPU placement (same rationale as sft_train.py)
     load_kwargs = {
         "torch_dtype": config.TORCH_DTYPE,
-        "device_map": "auto",
+        "device_map": {"": 0} if config.DEVICE == "cuda" else "auto",
     }
     if config.USE_QUANTIZATION:
         bnb_config = BitsAndBytesConfig(
             load_in_4bit=True,
             bnb_4bit_use_double_quant=True,
             bnb_4bit_quant_type="nf4",
-            bnb_4bit_compute_dtype=config.TORCH_DTYPE
+            bnb_4bit_compute_dtype=config.TORCH_DTYPE,
+            llm_int8_enable_fp32_cpu_offload=False,
         )
         load_kwargs["quantization_config"] = bnb_config
 
@@ -74,17 +76,25 @@ def train_dpo(args):
         learning_rate=args.learning_rate,
         num_train_epochs=args.epochs,
         save_strategy="epoch",
-        evaluation_strategy="no",   # epoch 경계 eval 제거 → 피크 메모리 방지
+        save_total_limit=2,  # 디스크 절약: 최근 2개 checkpoint 만 유지
+        # Step-level evaluation to detect DPO overfitting (much faster than epoch
+        # eval on large datasets, still catches overfitting within an epoch)
+        evaluation_strategy="steps",
+        eval_steps=50,
         logging_steps=10,
+        warmup_ratio=0.1,  # DPO 권장: 학습 초기 안정화
         bf16=(config.DEVICE == "cuda"),
         fp16=False,
         remove_unused_columns=False,
         report_to="none",
-        load_best_model_at_end=False,  # best model 메모리 유지 제거 → 마지막 epoch 모델 저장
-        optim="paged_adamw_8bit",  # QLoRA 표준: optimizer state 메모리 75% 절감 + OOM 시 CPU offload
-        # Gradient Checkpointing: activation 메모리 60-70% 절약 (DPO의 OOM 방지 핵심)
+        # Load best model (by eval_loss) to avoid overfit last-epoch
+        load_best_model_at_end=True,
+        metric_for_best_model="eval_loss",
+        greater_is_better=False,
+        optim="paged_adamw_8bit",  # QLoRA 표준: optimizer state 메모리 75% 절감
         gradient_checkpointing=True,
-        gradient_checkpointing_kwargs={"use_reentrant": False},  # PEFT 모델 호환 필수
+        gradient_checkpointing_kwargs={"use_reentrant": False},  # PEFT 호환
+        max_grad_norm=1.0,  # Gradient clipping (DPO 안정성)
     )
 
     # 5. DPO Trainer (SFT PEFT 모델이 이미 로드되어 있으므로 peft_config 불필요)

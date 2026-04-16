@@ -10,26 +10,27 @@ def generate_rejections(args):
     config.ensure_base_model()
 
     # 1. Load SFT Model (Base + Adapter)
+    # Same device_map fix as sft_train.py for DGX GH200 (unified memory)
+    device_map = {"": 0} if config.DEVICE == "cuda" else "auto"
     print(f"Loading SFT model from {args.sft_model_path} for rejection generation...")
     base_model = AutoModelForCausalLM.from_pretrained(
         args.base_model,
         torch_dtype=config.TORCH_DTYPE,
-        device_map="auto",
+        device_map=device_map,
         attn_implementation="eager"  # Gemma2 권장
     )
     model = PeftModel.from_pretrained(base_model, args.sft_model_path)
     tokenizer = AutoTokenizer.from_pretrained(args.sft_model_path)
-    
+
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
-    tokenizer.padding_side = "left" # 필수: Batch inference를 위해 왼쪽 패딩
-    
-    # 2. Pipeline setup
+    tokenizer.padding_side = "left"  # 필수: Batch inference를 위해 왼쪽 패딩
+
+    # 2. Pipeline setup — don't re-specify device_map (model already placed)
     pipe = pipeline(
-        "text-generation", 
-        model=model, 
+        "text-generation",
+        model=model,
         tokenizer=tokenizer,
-        device_map="auto"
     )
 
     # 3. Load Original Dataset
@@ -76,7 +77,11 @@ if __name__ == "__main__":
     parser.add_argument("--split", type=str, default="train[:]")
     parser.add_argument("--output_path", type=str, default=config.DYNAMIC_DATASET_PATH)
     parser.add_argument("--batch_size", type=int, default=4)
-    parser.add_argument("--max_new_tokens", type=int, default=256)
+    parser.add_argument(
+        "--max_new_tokens", type=int, default=512,
+        help="Max tokens per rejection. 256 creates length bias (rejected ~45%% of chosen). "
+             "512 is closer to chosen average (~2,226 chars ≈ 550 tokens).",
+    )
     
     args = parser.parse_args()
     generate_rejections(args)

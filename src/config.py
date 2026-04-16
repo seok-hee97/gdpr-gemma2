@@ -67,16 +67,14 @@ BATCH_SIZE = 1
 GRADIENT_ACCUMULATION_STEPS = 4
 
 # --- DPO Configuration ---
-# β raised from 0.1 → 0.3 (2026-04-13) after data inspection revealed
-# noisy preference pairs: stronger KL constraint to SFT prevents the model
-# from over-fitting to length/citation-count surface signals.
-DPO_BETA = 0.3
+# Phase 5 reverts to standard DPO (β=0.1, sigmoid loss) because targeted
+# rejections are now length-matched with clean error signals — no longer
+# needs the Tier 1 noise-robustness settings (β=0.3, IPO).
+# CLI flags can override: --beta 0.3 --loss_type ipo
+DPO_BETA = 0.1
 DPO_LEARNING_RATE = 5e-6
 DPO_EPOCHS = 3
-# IPO (Identity Preference Optimization, Azar et al. 2023) is more robust to
-# noisy / weakly-differentiated preference pairs than vanilla sigmoid DPO.
-# Falls back to "sigmoid" if you want to compare.
-DPO_LOSS_TYPE = "ipo"
+DPO_LOSS_TYPE = "sigmoid"
 MAX_PROMPT_LENGTH = 1024
 MAX_LENGTH = 2048
 
