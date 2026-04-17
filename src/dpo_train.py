@@ -17,7 +17,8 @@ def train_dpo(args):
 
     # 1. Load Tokenizer (SFT 단계에서 사용된 것과 동일하게)
     tokenizer = AutoTokenizer.from_pretrained(args.base_model)
-    tokenizer.pad_token = tokenizer.eos_token
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
 
     # 2. Load Dynamic Dataset
     print(f"Loading dynamic dataset from {args.dataset_path}")
@@ -28,8 +29,8 @@ def train_dpo(args):
         prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         return {
             "prompt": prompt,
-            "chosen": example['output'] + tokenizer.eos_token,
-            "rejected": example['rejected'] + tokenizer.eos_token
+            "chosen": example['output'],
+            "rejected": example['rejected'],
         }
     
     dataset = dataset.map(format_dpo, remove_columns=dataset.column_names)
@@ -75,10 +76,12 @@ def train_dpo(args):
         gradient_accumulation_steps=args.gradient_accumulation_steps,
         learning_rate=args.learning_rate,
         num_train_epochs=args.epochs,
-        save_strategy="epoch",
-        save_total_limit=2,
-        evaluation_strategy="epoch",
-        logging_steps=10,
+        save_strategy="steps",
+        save_steps=100,
+        save_total_limit=3,
+        evaluation_strategy="steps",
+        eval_steps=100,
+        logging_steps=5,
         warmup_ratio=0.1,  # DPO 권장: 학습 초기 안정화
         bf16=(config.DEVICE == "cuda"),
         fp16=False,
