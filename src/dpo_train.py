@@ -1,8 +1,19 @@
 import argparse
+import torch
+
+# PyTorch 2.6 changed torch.load default to weights_only=True, which breaks
+# transformers<4.46 checkpoint resume (rng_state.pth contains numpy globals).
+# Force weights_only=False for all torch.load calls in this process.
+_orig_torch_load = torch.load
+def _compat_torch_load(f, *args, **kwargs):
+    kwargs.setdefault("weights_only", False)
+    return _orig_torch_load(f, *args, **kwargs)
+torch.load = _compat_torch_load
+
 from transformers import (
-    AutoModelForCausalLM, 
-    AutoTokenizer, 
-    TrainingArguments, 
+    AutoModelForCausalLM,
+    AutoTokenizer,
+    TrainingArguments,
     BitsAndBytesConfig,
     set_seed
 )
