@@ -35,8 +35,8 @@ def train_dpo(args):
     
     dataset = dataset.map(format_dpo, remove_columns=dataset.column_names)
     
-    # Validation Split
-    dataset_split = dataset.train_test_split(test_size=0.1)
+    # Validation Split (seed 고정 — resume 시 동일 분할 보장)
+    dataset_split = dataset.train_test_split(test_size=0.1, seed=42)
     train_dataset = dataset_split["train"]
     eval_dataset = dataset_split["test"]
 
@@ -73,7 +73,9 @@ def train_dpo(args):
     training_args = TrainingArguments(
         output_dir=args.output_dir,
         per_device_train_batch_size=args.batch_size,
+        per_device_eval_batch_size=args.batch_size,
         gradient_accumulation_steps=args.gradient_accumulation_steps,
+        dataloader_pin_memory=False,
         learning_rate=args.learning_rate,
         num_train_epochs=args.epochs,
         save_strategy="steps",
@@ -113,7 +115,11 @@ def train_dpo(args):
     )
 
     print(f"Starting Stage 3: DPO Alignment with {len(train_dataset)} train and {len(eval_dataset)} eval samples...")
-    trainer.train()
+    import os
+    resume = os.path.isdir(args.output_dir) and any(
+        d.startswith("checkpoint-") for d in os.listdir(args.output_dir)
+    )
+    trainer.train(resume_from_checkpoint=resume)
 
     print(f"Saving final DPO model to {args.output_dir}...")
     trainer.model.save_pretrained(args.output_dir)
@@ -136,7 +142,7 @@ if __name__ == "__main__":
         type=str,
         default=config.DPO_LOSS_TYPE,
         choices=["sigmoid", "ipo", "hinge", "kto_pair"],
-        help="DPO loss variant (default 'ipo' — robust to noisy pairs)",
+        help="DPO loss variant (default from config.DPO_LOSS_TYPE — currently 'sigmoid').",
     )
     args = parser.parse_args()
     train_dpo(args)
