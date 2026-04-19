@@ -68,9 +68,10 @@ def run_evaluation(args):
     print(f"BLEU: {bleu_results['bleu']:.4f}")
     print(f"BertScore F1 (avg): {avg_bert_f1:.4f}")
     
-    # 상세 로그 저장
+    # 상세 로그 저장 (output_csv에 디렉토리 포함 시 그대로, 파일명만이면 EVAL_RESULTS_DIR 하위)
     df = pd.DataFrame(results_log)
-    output_path = os.path.join(config.EVAL_RESULTS_DIR, args.output_csv)
+    output_path = args.output_csv if os.path.dirname(args.output_csv) else os.path.join(config.EVAL_RESULTS_DIR, args.output_csv)
+    os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
     df.to_csv(output_path, index=False)
     print(f"Detailed logs saved to {output_path}")
     

@@ -16,8 +16,8 @@ def evaluate_with_llm(args):
 
     client = OpenAI(api_key=config.OPENAI_API_KEY)
     
-    # 평가 결과 입력 경로
-    input_path = os.path.join(config.EVAL_RESULTS_DIR, args.input_csv)
+    # 평가 결과 입력 경로 (디렉토리 포함 시 그대로, 파일명만이면 EVAL_RESULTS_DIR 하위)
+    input_path = args.input_csv if os.path.dirname(args.input_csv) else os.path.join(config.EVAL_RESULTS_DIR, args.input_csv)
     
     try:
         df = pd.read_csv(input_path)
@@ -85,8 +85,9 @@ def evaluate_with_llm(args):
         except Exception as e:
             print(f"API Error at sample {row.get('id')}: {e}")
 
-    # 결과 저장 경로
-    output_path = os.path.join(config.EVAL_RESULTS_DIR, args.output_csv)
+    # 결과 저장 경로 (디렉토리 포함 시 그대로, 파일명만이면 EVAL_RESULTS_DIR 하위)
+    output_path = args.output_csv if os.path.dirname(args.output_csv) else os.path.join(config.EVAL_RESULTS_DIR, args.output_csv)
+    os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
     result_df = pd.DataFrame(judge_results)
     
     # Flatten scores into columns
