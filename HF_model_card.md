@@ -36,15 +36,36 @@ model-index:
     - type: bertscore
       name: BertScore F1
       value: 0.8527
+    - type: llm_judge
+      name: Legal Correctness (GPT-4o, n=50)
+      value: 3.06
+    - type: llm_judge
+      name: Article Accuracy (GPT-4o, n=50)
+      value: 2.50
+    - type: llm_judge
+      name: Compliance Alignment (GPT-4o, n=50)
+      value: 3.40
+    - type: llm_judge
+      name: Clarity (GPT-4o, n=50)
+      value: 3.74
 ---
 
-# GDPR-Gemma-2-2B — GDPR Compliance Assistant
+# GDPR-Gemma-2-2B — GDPR Compliance Assistant (Research Artefact)
 
 A specialized fine-tune of **`google/gemma-2-2b-it`** for English GDPR
 (General Data Protection Regulation) Q&A. The model is aligned with expert
 GDPR answers via a **3-stage pipeline** — Supervised Fine-Tuning, Dynamic
 Rejection sampling, and Direct Preference Optimization (DPO) — using QLoRA
 for resource-friendly training.
+
+> **Honest Positioning (2026-04-19)**: This model is released as a
+> **reproducibility / research artefact** of a full 3-stage GDPR alignment
+> pipeline. Rigorous n=50 GPT-4o evaluation across 7 configurations found
+> that **no fine-tuned variant exceeds the base `gemma-2-2b-it` on any
+> qualitative criterion** (ceiling effect). The artefact is valuable for
+> studying pipeline mechanics, not for production deployment where the base
+> model is an equal or better choice. See the [Evaluation](#evaluation) and
+> [Limitations](#limitations--risks) sections for the full picture.
 
 > **Disclaimer**: This model provides informational guidance only and **does
 > not constitute legal advice**. Always consult a qualified legal
@@ -98,9 +119,11 @@ than synthetic or generic wrong answers.
 ## Evaluation
 
 Quantitative on 100 samples from `sims2k/GDPR_QA_instruct_dataset`;
-qualitative via GPT-4o LLM-as-a-Judge on 10 samples (1–5 scale).
+qualitative via GPT-4o LLM-as-a-Judge on **50 samples** (1–5 scale). An
+earlier n=10 evaluation suggested DPO exceeded Base; that finding did not
+hold under n=50 and was retracted.
 
-### Quantitative (ROUGE / BLEU / BertScore)
+### Quantitative (ROUGE / BLEU / BertScore F1, n=100)
 
 | Metric        | Base   | SFT        | **DPO (this model)** |
 |---------------|--------|------------|----------------------|
@@ -108,19 +131,39 @@ qualitative via GPT-4o LLM-as-a-Judge on 10 samples (1–5 scale).
 | BLEU          | 0.0838 | **0.1146** | 0.1034               |
 | BertScore F1  | 0.8432 | **0.8541** | 0.8527               |
 
-### Qualitative (GPT-4o Judge, 1–5)
+### Qualitative (GPT-4o Judge, 1–5, n=50)
 
-| Criterion             | Base | SFT  | **DPO (this model)** |
-|-----------------------|------|------|----------------------|
-| Legal Correctness     | 3.10 | 3.00 | **3.40**             |
-| Article Accuracy      | 2.20 | 2.30 | **2.60**             |
-| Compliance Alignment  | 3.70 | 3.40 | **3.80**             |
-| Clarity               | **4.10** | **4.10** | 3.80         |
+| Criterion             | Base     | SFT      | **DPO (this model)** |
+|-----------------------|----------|----------|----------------------|
+| Legal Correctness     | **3.18** | **3.18** | 3.06                 |
+| Article Accuracy      | **2.64** | 2.52     | 2.50                 |
+| Compliance Alignment  | **3.62** | **3.62** | 3.40                 |
+| Clarity               | 4.10     | **4.12** | 3.74                 |
 
-DPO improves legal correctness, GDPR-article citation accuracy, and
-compliance alignment over both Base and SFT. It trades a small amount of
-surface-level lexical overlap (ROUGE/BLEU) and clarity in exchange for
-substantively more accurate legal content — a typical alignment trade-off.
+### What the n=50 evaluation shows
+
+- **Base is at ceiling for this task + data regime.** The DPO model
+  (published here) is slightly **below** Base on all four qualitative
+  criteria. SFT is at parity with Base.
+- **Surface-overlap metrics (ROUGE/BLEU/BertScore) are not discriminative**
+  for this task — SFT tops them because it directly maximizes reference-text
+  likelihood, but this does not translate to substantive quality.
+- A broader Phase 5 comparison (including an SFT trained on 2,277 samples
+  and two Phase-5 DPO variants using 2,277 targeted rejections vs 316
+  self-play rejections) confirmed the same pattern: no fine-tuned variant
+  exceeds Base. See `AGENTS.md` in the source repository for the 7-way
+  comparison table and Phase 5 research-question answers.
+
+### When to prefer DPO (this model) vs Base
+
+- **Prefer DPO** when you value slightly higher surface-level agreement with
+  the reference dataset style (ROUGE-L 0.225 vs Base 0.207) and want a
+  model that is aware of the 3-stage pipeline it was trained with — e.g.,
+  for reproducing or studying the pipeline.
+- **Prefer Base (`google/gemma-2-2b-it`)** when you only care about
+  answer quality on open-ended GDPR Q&A — it matches or beats DPO on every
+  qualitative criterion (Legal Correctness, Article Accuracy, Compliance,
+  Clarity) at n=50.
 
 ---
 
@@ -179,16 +222,21 @@ print(ask_gdpr("What are the main principles of GDPR?"))
 
 ## Limitations & Risks
 
+- **Does not exceed Base**: n=50 GPT-4o evaluation shows this DPO model is
+  **below `gemma-2-2b-it` on every qualitative criterion**. Do not deploy
+  this model in a setting where the base model is available and sufficient.
 - **Snapshot of the regulation**: Trained on a static GDPR Q&A dataset;
   does not reflect post-training case law (CJEU rulings, EDPB guidelines)
   or national supervisory authority decisions.
 - **English only**: No multilingual coverage; legal language outside English
   may degrade significantly.
-- **Article-citation accuracy**: Average ~2.6/5 — the model occasionally
-  cites incorrect or non-existent article numbers. Always verify citations
-  against the official GDPR text.
-- **Alignment trade-off**: DPO improves substantive legal accuracy at a
-  small cost to surface fluency vs the SFT-only variant.
+- **Article-citation accuracy**: Average 2.50/5 (vs Base 2.64/5) — the
+  model occasionally cites incorrect or non-existent article numbers.
+  Always verify citations against the official GDPR text.
+- **Small-data DPO failure mode**: DPO was trained on 316 self-generated
+  preference pairs. Below the documented viability threshold (≈5k pairs for
+  a 2B model), DPO gradient noise dominates signal and can regress a
+  well-tuned base model. This release documents that failure empirically.
 - **Hallucination**: As with any LLM, it can fabricate plausible-looking
   legal references. Treat outputs as drafts, not authoritative sources.
 
@@ -202,11 +250,15 @@ decision-support tool, never as the sole basis for compliance actions.
 ## Citation
 
 ```bibtex
-@misc{gdpr_gemma_2_2b_2024,
-  title  = {GDPR-Gemma-2-2B: A 3-Stage Aligned GDPR Compliance Assistant},
+@misc{gdpr_gemma_2_2b_2026,
+  title  = {GDPR-Gemma-2-2B: A 3-Stage Aligned GDPR Compliance Assistant
+            (Reproducibility Artefact with Documented Ceiling Effect)},
   author = {seok-hee97},
-  year   = {2024},
+  year   = {2026},
   howpublished = {Hugging Face Model Hub},
-  url    = {https://huggingface.co/cycloevan/gdpr_gemma-2-2b}
+  url    = {https://huggingface.co/cycloevan/gdpr_gemma-2-2b},
+  note   = {n=50 GPT-4o evaluation across 7 configurations; base model
+            gemma-2-2b-it is at ceiling, fine-tuned variants do not exceed
+            Base. See repository AGENTS.md for the full Phase 5 study.}
 }
 ```
